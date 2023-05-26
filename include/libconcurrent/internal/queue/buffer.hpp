@@ -1,5 +1,4 @@
-#ifndef __DEQUE_HPP__
-#define __DEQUE_HPP__
+#pragma once
 
 #include <cassert>
 #include <concepts>
@@ -8,7 +7,6 @@
 #include <type_traits>
 
 namespace async {
-
 namespace internal {
 template <typename T> class CircularBuffer {
 public:
@@ -47,5 +45,3 @@ private:
 };
 } // namespace internal
 } // namespace async
-
-#endif
