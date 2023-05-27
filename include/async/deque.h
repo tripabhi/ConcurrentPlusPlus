@@ -1,8 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <async/internal/buffer.h>
 #include <atomic>
-#include <buffer.hpp>
 #include <cassert>
 #include <concepts>
 #include <cstddef>
@@ -103,7 +103,8 @@ template <typename T> std::optional<T> Deque<T>::pop() noexcept {
       /* Mark it when you fail the race */
       bottom_.store(bottom + 1, relaxed);
     }
-    return failed_to_retrieve ? std::nullopt : buf->get(bottom);
+    return failed_to_retrieve ? std::nullopt
+                              : std::optional<T>(buf->get(bottom));
   } else { /* Empty queue */
     bottom_.store(bottom + 1, relaxed);
     return std::nullopt;
@@ -123,10 +124,11 @@ template <typename T> std::optional<T> Deque<T>::steal() noexcept {
     bool failed_to_retrieve =
         (!top_.compare_exchange_strong(top, top + 1, seq_cst, relaxed));
 
-    return failed_to_retrieve ? std::nullopt : x;
+    return failed_to_retrieve ? std::nullopt : std::optional<T>{x};
   } else { /* Empty queue */
     return std::nullopt;
   }
 }
 
+template <typename T> Deque<T>::~Deque() noexcept { delete buffer_.load(); }
 } // namespace async
