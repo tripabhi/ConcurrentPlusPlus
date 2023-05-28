@@ -1,11 +1,11 @@
 #pragma once
 
+#include <async/internal/utility.h>
+#include <atomic>
 #include <cassert>
 #include <concepts>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
-
 namespace async {
 namespace internal {
 template <typename T> class CircularBuffer {
@@ -16,32 +16,36 @@ public:
            "Capacity must be power of 2");
   }
 
-  std::int64_t capacity() const { return capacity_; }
+  std::int64_t capacity() const noexcept { return capacity_; }
 
-  void set(std::int64_t index,
-           T &&val) requires std::is_nothrow_move_assignable_v<T> {
-    array_[index & mask_] = std::move(val);
+  void set(std::int64_t index, T t) noexcept {
+    buffer_[index & mask_].store(t, std::memory_order_relaxed);
   }
 
-  T get(std::int64_t index) const
-      requires std::is_nothrow_move_constructible_v<T> {
-    return array_[index & mask_];
+  T get(std::int64_t index) const noexcept {
+    return buffer_[index & mask_].load(std::memory_order_relaxed);
   }
 
-  CircularBuffer *expandAndCopy(std::int64_t start_inclusive,
-                                std::int64_t end_exclusive) const {
-    CircularBuffer *newBuf = new CircularBuffer{capacity_ << 1};
-    for (std::int64_t i = start_inclusive; i < end_exclusive; i++) {
-      newBuf->set(i, get(i));
+  CircularBuffer<T> *expandAndCopy(std::int64_t start_inclusive,
+                                   std::int64_t end_exclusive) {
+    CircularBuffer<T> *buf = new CircularBuffer{capacity_ << 1};
+    for (std::int64_t i = start_inclusive; i != end_exclusive; i++) {
+      buf->set(i, get(i));
     }
-    return newBuf;
+    return buf;
   }
 
 private:
   std::int64_t capacity_;
   std::int64_t mask_;
 
-  std::unique_ptr<T[]> array_ = std::make_unique<T[]>(capacity_);
+#if !__cpp_lib_smart_ptr_for_overwrite
+  alignas(internal::ALIGNMENT) std::unique_ptr<std::atomic<T>[]> buffer_ =
+      std::make_unique<std::atomic<T>[]>(capacity_);
+#else
+  alignas(internal::ALIGNMENT) std::unique_ptr<std::atomic<T>[]> buffer_ =
+      std::make_unique_for_overwrite<std::atomic<T>[]>(capacity_);
+#endif
 };
 } // namespace internal
 } // namespace async

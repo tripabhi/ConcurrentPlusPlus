@@ -13,6 +13,7 @@ enable_testing()
 file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 add_executable(tests "${sources}")
 
-target_link_libraries(tests PUBLIC async doctest::doctest)
+target_link_libraries(tests PUBLIC ${CMAKE_THREAD_LIBS_INIT} async
+                                   doctest::doctest)
 
 doctest_discover_tests(tests)

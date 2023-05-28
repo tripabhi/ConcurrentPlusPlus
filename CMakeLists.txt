@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 # Build include directory
 add_subdirectory(include)
+add_subdirectory(function2)
 
 option(BUILD_TESTS "Flag to build tests" ON)
 
