@@ -104,7 +104,7 @@ public:
 private:
   std::promise<std::invoke_result_t<F>>
       promise_; /* Promise object for setting the result or exception */
-  F callable_;  /* Stored callable object (function) */
+  F callable_;  /* Stored callable object (function)qq */
 };
 
 } // namespace internal
