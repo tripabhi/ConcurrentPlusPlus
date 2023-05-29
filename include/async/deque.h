@@ -13,19 +13,6 @@
 #include <async/internal/utility.h>
 
 namespace async {
-namespace internal {
-
-template <typename T> struct is_always_lock_free {
-  static constexpr bool value = std::atomic<T>::is_always_lock_free;
-};
-
-template <typename T>
-static constexpr bool lock_free_v = std::conjunction_v<
-    std::is_trivially_copyable<T>, std::is_copy_constructible<T>,
-    std::is_move_constructible<T>, std::is_copy_assignable<T>,
-    std::is_move_assignable<T>, is_always_lock_free<T>>;
-
-} // namespace internal
 
 template <typename T> class Deque {
 public:
@@ -49,8 +36,10 @@ public:
   ~Deque();
 
 private:
-  static constexpr bool no_alloc =
-      std::is_trivially_destructible_v<T> && internal::lock_free_v<T>;
+  static constexpr bool no_alloc = std::conjunction_v<
+      std::is_trivially_copyable<T>, std::is_copy_constructible<T>,
+      std::is_move_constructible<T>, std::is_copy_assignable<T>,
+      std::is_move_assignable<T>, std::is_trivially_destructible<T>>;
 
   using buffer_t =
       internal::CircularBuffer<std::conditional_t<no_alloc, T, T *>>;
@@ -94,7 +83,7 @@ void Deque<T>::push(Args &&... args) {
   std::int64_t top = top_.load(acquire);
   auto *buf = buffer_.load(relaxed);
 
-  if (buf->capacity() < (bottom - top) + 1) {
+  if (bottom - top > buf->capacity() - 1) {
     discarded_buffers_.emplace_back(
         std::exchange(buf, buf->expandAndCopy(top, bottom)));
     buffer_.store(buf, relaxed);

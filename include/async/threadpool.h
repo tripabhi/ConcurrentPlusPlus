@@ -123,10 +123,10 @@ ThreadPool::submit(F &&f, Args &&... args) {
 }
 
 template <std::invocable F> void ThreadPool::externalPush(F &&f) {
-  std::size_t i = rotating_index_++ % queues_.size();
+  std::size_t slot = rotating_index_++ % queues_.size();
   pending_task_count_.fetch_add(1, std::memory_order_relaxed);
-  queues_[i].dq.push(std::forward<F>(f));
-  queues_[i].sem.signal();
+  queues_[slot].dq.push(std::forward<F>(f));
+  queues_[slot].sem.signal();
 }
 
 ThreadPool::~ThreadPool() {
