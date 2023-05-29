@@ -5,7 +5,7 @@ ConcurrentPlusPlus is a C++ library that helps you write parallel programs. The 
 
 # Usage
 The `ThreadPool` class can be used like:
-```
+``` cpp
 #include <async/threadpool.h>
 
 int multiply(int a, int b) { return a * b; }
@@ -19,7 +19,7 @@ int main() {
 
 # Build
 To build the project:
-```
+``` bash
 mkdir build && cd build
 cmake ..
 make
