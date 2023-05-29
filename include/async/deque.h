@@ -55,9 +55,9 @@ private:
   using buffer_t =
       internal::CircularBuffer<std::conditional_t<no_alloc, T, T *>>;
 
-  alignas(internal::ALIGNMENT) std::atomic<std::int64_t> top_;
-  alignas(internal::ALIGNMENT) std::atomic<std::int64_t> bottom_;
-  alignas(internal::ALIGNMENT) std::atomic<buffer_t *> buffer_;
+  std::atomic<std::int64_t> top_;
+  std::atomic<std::int64_t> bottom_;
+  std::atomic<buffer_t *> buffer_;
 
   std::vector<std::unique_ptr<buffer_t>> discarded_buffers_;
 
@@ -181,10 +181,7 @@ template <typename T> Deque<T>::~Deque() {
     while (!empty()) {
       pop();
     }
-
-    assert(empty() && "Busy during destruction");
   }
-
   delete buffer_.load();
 }
 

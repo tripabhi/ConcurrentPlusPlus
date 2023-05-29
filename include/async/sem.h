@@ -1,12 +1,12 @@
 #pragma once
 
-// Code in the file below is an adaptation of Jeff Preshing's portable +
-// lightweight semaphore implementations, see:
-//
+// The following code is taken Jeff Preshing's github repository
 // https://github.com/preshing/cpp11-on-multicore
-// https://preshing.com/20150316/semaphores-are-surprisingly-versatile/
-
-// LICENSE:
+// The code has been wrapped in the namespace of the project, otherwise no
+// change has been made to the code.
+//
+//
+// LICENSE
 //
 // Copyright (c) 2015 Jeff Preshing
 //
@@ -19,19 +19,17 @@
 // freely, subject to the following restrictions:
 //
 // 1. The origin of this software must not be misrepresented; you must not
-//	claim that you wrote the original software. If you use this software
-//	in a product, an acknowledgement in the product documentation would be
-//	appreciated but is not required.
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgement in the product documentation would be
+//    appreciated but is not required.
 // 2. Altered source versions must be plainly marked as such, and must not be
-//	misrepresented as being the original software.
+//    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include <async/internal/utility.h>
 #include <atomic>
 #include <cassert>
 
 namespace async {
-
 namespace internal {
 
 #if defined(_WIN32)
@@ -103,7 +101,6 @@ public:
 // Semaphore (POSIX, Linux)
 //---------------------------------------------------------
 
-#include <errno.h>
 #include <semaphore.h>
 
 class Semaphore {
@@ -146,54 +143,62 @@ public:
 
 } // namespace internal
 
-class Semaphore {
-public:
-  explicit Semaphore(std::ptrdiff_t desired) : m_count(desired) {
-    assert(desired >= 0);
+//---------------------------------------------------------
+// LightweightSemaphore
+//---------------------------------------------------------
+class LightweightSemaphore {
+private:
+  std::atomic<int> m_count;
+  internal::Semaphore m_sema;
+
+  void waitWithPartialSpinning() {
+    int oldCount;
+    // Is there a better way to set the initial spin count?
+    // If we lower it to 1000, testBenaphore becomes 15x slower on my Core
+    // i7-5930K Windows PC, as threads start hitting the kernel semaphore.
+    int spin = 10000;
+    while (spin--) {
+      oldCount = m_count.load(std::memory_order_relaxed);
+      if ((oldCount > 0) &&
+          m_count.compare_exchange_strong(oldCount, oldCount - 1,
+                                          std::memory_order_acquire))
+        return;
+      std::atomic_signal_fence(
+          std::memory_order_acquire); // Prevent the compiler from collapsing
+                                      // the loop.
+    }
+    oldCount = m_count.fetch_sub(1, std::memory_order_acquire);
+    if (oldCount <= 0) {
+      m_sema.wait();
+    }
   }
 
-  void release(std::ptrdiff_t update = 1) {
-    std::ptrdiff_t oldCount =
-        m_count.fetch_add(update, std::memory_order_release);
-    std::ptrdiff_t toRelease = -oldCount < update ? -oldCount : update;
+public:
+  LightweightSemaphore(int initialCount = 0) : m_count(initialCount) {
+    assert(initialCount >= 0);
+  }
+
+  bool tryWait() {
+    int oldCount = m_count.load(std::memory_order_relaxed);
+    return (oldCount > 0 &&
+            m_count.compare_exchange_strong(oldCount, oldCount - 1,
+                                            std::memory_order_acquire));
+  }
+
+  void wait() {
+    if (!tryWait())
+      waitWithPartialSpinning();
+  }
+
+  void signal(int count = 1) {
+    int oldCount = m_count.fetch_add(count, std::memory_order_release);
+    int toRelease = -oldCount < count ? -oldCount : count;
     if (toRelease > 0) {
       m_sema.signal(toRelease);
     }
   }
-
-  // If possible consumes all counts in the semaphore, otherwise blocks until
-  // released.
-  void acquire_many() {
-    for (std::ptrdiff_t spin = 0; spin < 10'000; ++spin) {
-      std::ptrdiff_t old = m_count.load(relaxed);
-      if (old > 0 && m_count.compare_exchange_strong(old, 0, acquire)) {
-        return;
-      }
-      std::atomic_signal_fence(
-          acquire); // Prevent the compiler from collapsing the loop.
-    }
-
-    std::ptrdiff_t old = m_count.load(relaxed);
-
-    for (;;) {
-      if (old <= 0) {
-        if (m_count.compare_exchange_strong(old, old - 1, acq_rel, relaxed)) {
-          m_sema.wait();
-          return;
-        }
-      } else if (m_count.compare_exchange_strong(old, 0, acq_rel, relaxed)) {
-        return;
-      }
-    }
-  }
-
-private:
-  alignas(internal::ALIGNMENT) std::atomic<std::ptrdiff_t> m_count;
-  internal::Semaphore m_sema;
-
-  static constexpr std::memory_order relaxed = std::memory_order_relaxed;
-  static constexpr std::memory_order acq_rel = std::memory_order_acq_rel;
-  static constexpr std::memory_order acquire = std::memory_order_acquire;
 };
+
+typedef LightweightSemaphore DefaultSemaphoreType;
 
 } // namespace async

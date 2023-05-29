@@ -40,10 +40,10 @@ private:
   std::int64_t mask_;
 
 #if !__cpp_lib_smart_ptr_for_overwrite
-  alignas(internal::ALIGNMENT) std::unique_ptr<std::atomic<T>[]> buffer_ =
+  std::unique_ptr<std::atomic<T>[]> buffer_ =
       std::make_unique<std::atomic<T>[]>(capacity_);
 #else
-  alignas(internal::ALIGNMENT) std::unique_ptr<std::atomic<T>[]> buffer_ =
+  std::unique_ptr<std::atomic<T>[]> buffer_ =
       std::make_unique_for_overwrite<std::atomic<T>[]>(capacity_);
 #endif
 };

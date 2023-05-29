@@ -16,4 +16,8 @@ add_executable(tests "${sources}")
 target_link_libraries(tests PUBLIC ${CMAKE_THREAD_LIBS_INIT} async
                                    doctest::doctest)
 
+target_compile_definitions(
+  tests
+  PUBLIC $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:DOCTEST_CONFIG_USE_STD_HEADERS>)
+
 doctest_discover_tests(tests)
