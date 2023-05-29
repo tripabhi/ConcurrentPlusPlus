@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <async/internal/buffer.h>
-#include <async/internal/utility.h>
 
 namespace async {
 

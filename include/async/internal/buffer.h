@@ -1,6 +1,5 @@
 #pragma once
 
-#include <async/internal/utility.h>
 #include <atomic>
 #include <cassert>
 #include <concepts>

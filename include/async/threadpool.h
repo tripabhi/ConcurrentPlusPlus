@@ -1,4 +1,3 @@
-// Written in 2020 by Conor Williams (cw648@cam.ac.uk)
 
 #pragma once
 
