@@ -5,13 +5,8 @@ find_package(Threads)
 add_library(async INTERFACE ${ASYNC_INTERFACE_HEADERS})
 
 set(ASYNC_INTERFACE_HEADERS
-    async/deque.h
-    async/internal/utility.h
-    async/internal/buffer.h
-    async/internal/xoroshiro128starstar.h
-    async/mutex.h
-    async/sem.h
-    async/threadpool.h)
+    async/deque.h async/internal/buffer.h async/internal/xoroshiro128starstar.h
+    async/mutex.h async/sem.h async/threadpool.h)
 
 target_link_libraries(async INTERFACE ${CMAKE_THREAD_LIBS_INIT}
                                       function2::function2)
