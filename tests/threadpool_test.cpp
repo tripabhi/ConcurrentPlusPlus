@@ -79,3 +79,40 @@ TEST_CASE("threadpool.IdentityFunction.8Threads" * doctest::timeout(25)) {
 TEST_CASE("threadpool.IdentityFunction.16Threads" * doctest::timeout(25)) {
   test_identity_function(16);
 }
+
+void test_with_varying_wait_periods(std::size_t nthreads) {
+  std::vector<std::future<void>> futures;
+
+  {
+    async::ThreadPool pool(nthreads);
+    for (int i = 0; i < nthreads * 10; i++) {
+      futures.emplace_back(pool.submit([i]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(i * 10));
+      }));
+    }
+  }
+
+  for (auto &fut : futures) {
+    REQUIRE(fut.valid());
+  }
+}
+
+TEST_CASE("threadpool.VaryingWait.1Thread") {
+  test_with_varying_wait_periods(1);
+}
+
+TEST_CASE("threadpool.VaryingWait.2Threads") {
+  test_with_varying_wait_periods(2);
+}
+
+TEST_CASE("threadpool.VaryingWait.4Threads") {
+  test_with_varying_wait_periods(4);
+}
+
+TEST_CASE("threadpool.VaryingWait.8Threads") {
+  test_with_varying_wait_periods(8);
+}
+
+TEST_CASE("threadpool.VaryingWait.16Threads") {
+  test_with_varying_wait_periods(16);
+}
