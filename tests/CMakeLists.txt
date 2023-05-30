@@ -2,7 +2,7 @@ project(${CMAKE_PROJECT_NAME})
 
 include(../cmake/CPM.cmake)
 
-cpmaddpackage("gh:onqtam/doctest#2.4.7")
+CPMAddPackage("gh:onqtam/doctest#2.4.7")
 
 find_package(doctest REQUIRED)
 
