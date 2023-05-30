@@ -58,8 +58,12 @@ TEST_CASE("deque.PushAgainstSteal") {
   REQUIRE(pending == 0);
 }
 
+struct test_obj {
+  int field;
+};
+
 TEST_CASE("deque.PopAgainstSteal") {
-  async::Deque<int> deque;
+  async::Deque<test_obj> deque;
 
   auto &owner = deque;
   auto &thief = deque;
@@ -71,16 +75,16 @@ TEST_CASE("deque.PopAgainstSteal") {
   std::vector<std::thread> thieves;
 
   for (int i = 0; i < ntasks; i++) {
-    owner.push(1);
+    owner.push(test_obj{10});
   }
 
   for (int i = 0; i < num_threads; i++) {
     thieves.emplace_back([&thief, &pending]() {
       auto &copyQueue = thief;
       while (pending.load(std::memory_order_seq_cst) > 0) {
-        std::optional<int> fetched = copyQueue.steal();
+        std::optional<test_obj> fetched = copyQueue.steal();
         if (fetched) {
-          assert((*fetched) == 1);
+          assert((*fetched).field == 10);
           pending.fetch_sub(1);
         }
       }
@@ -88,9 +92,9 @@ TEST_CASE("deque.PopAgainstSteal") {
   }
 
   while (pending.load(std::memory_order_seq_cst) > 0) {
-    std::optional<int> fetched = owner.pop();
+    std::optional<test_obj> fetched = owner.pop();
     if (fetched) {
-      assert((*fetched) == 1);
+      assert((*fetched).field == 10);
       pending.fetch_sub(1);
     }
   }
