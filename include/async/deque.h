@@ -65,8 +65,8 @@ public:
   ~Deque();
 
 private:
-  // Determines if the element type T satisfies the conditions for optimization
-  // (no dynamic memory allocation/deallocation)
+  /* Determines if the element type T satisfies the conditions for optimization
+   * (no dynamic memory allocation/deallocation) */
   static constexpr bool no_alloc = std::conjunction_v<
       std::is_trivially_copyable<T>, std::is_copy_constructible<T>,
       std::is_move_constructible<T>, std::is_copy_assignable<T>,
@@ -75,17 +75,17 @@ private:
   using buffer_t =
       internal::CircularBuffer<std::conditional_t<no_alloc, T, T *>>;
 
-  // Atomic counters to keep track of top and bottom indices of the deque
+  /* Atomic counters to keep track of top and bottom indices of the deque */
   std::atomic<std::int64_t> top_;
   std::atomic<std::int64_t> bottom_;
 
-  // Atomic pointer to the buffer used to store the elements of the deque
+  /* Atomic pointer to the buffer used to store the elements of the deque */
   std::atomic<buffer_t *> buffer_;
 
-  // Vector of discarded buffers for memory management
+  /* Vector of discarded buffers for memory management */
   std::vector<std::unique_ptr<buffer_t>> discarded_buffers_;
 
-  // Constants for memory ordering of atomic operations
+  /* Constants for memory ordering of atomic operations */
   static constexpr std::memory_order acquire = std::memory_order_acquire;
   static constexpr std::memory_order consume = std::memory_order_consume;
   static constexpr std::memory_order relaxed = std::memory_order_relaxed;
@@ -119,23 +119,24 @@ void Deque<T>::push(Args &&... args) {
   std::int64_t top = top_.load(acquire);
   auto *buf = buffer_.load(relaxed);
 
-  // If the deque is full, expand the buffer and update the buffer pointer
+  /* If the deque is full, expand the buffer and update the buffer pointer */
   if (bottom - top > buf->capacity() - 1) {
     discarded_buffers_.emplace_back(
         std::exchange(buf, buf->expandAndCopy(top, bottom)));
     buffer_.store(buf, relaxed);
   }
 
-  // Create a new element in the buffer at the bottom index
+  /* Create a new element in the buffer at the bottom index */
   if constexpr (no_alloc) {
-    // Optimization for trivial types: construct the element directly in place
+    /* Optimization for trivial types: construct the element directly in place
+     */
     buf->set(bottom, {std::forward<Args>(args)...});
   } else {
-    // Allocate memory for the element and construct it in place
+    /* Allocate memory for the element and construct it in place */
     buf->set(bottom, new T{std::forward<Args>(args)...});
   }
 
-  // Memory barrier to ensure visibility of changes to other threads
+  /* Memory barrier to ensure visibility of changes to other threads */
   std::atomic_thread_fence(release);
   bottom_.store(bottom + 1, relaxed);
 }
@@ -147,17 +148,17 @@ Deque<T>::pop() noexcept(no_alloc || std::is_nothrow_move_constructible_v<T>) {
   std::int64_t new_bottom = bottom_.load(relaxed) - 1;
   auto *buf = buffer_.load(relaxed);
 
-  // Update the bottom index and synchronize with other threads
+  /* Update the bottom index and synchronize with other threads */
   bottom_.store(new_bottom, relaxed);
 
   std::atomic_thread_fence(seq_cst);
 
   std::int64_t top = top_.load(relaxed);
 
-  // Check if the deque is not empty
+  /* Check if the deque is not empty */
   if (top <= new_bottom) {
-    // If the deque has a single element, update top and bottom indices
-    // atomically
+    /*If the deque has a single element, update top and bottom indices
+     * atomically */
     if (top == new_bottom) {
       if (!top_.compare_exchange_strong(top, top + 1, seq_cst, relaxed)) {
         bottom_.store(new_bottom + 1, relaxed);
@@ -166,11 +167,11 @@ Deque<T>::pop() noexcept(no_alloc || std::is_nothrow_move_constructible_v<T>) {
       bottom_.store(new_bottom + 1, relaxed);
     }
 
-    // Retrieve the element from the buffer
+    /* Retrieve the element from the buffer */
     auto t = buf->get(new_bottom);
 
-    // Return the element based on optimization (with or without dynamic
-    // allocation)
+    /* Return the element based on optimization (with or without dynamic
+     * allocation) */
     if constexpr (no_alloc) {
       return t;
     } else {
@@ -193,19 +194,19 @@ Deque<T>::steal() noexcept(no_alloc ||
   std::atomic_thread_fence(seq_cst);
   std::int64_t bottom = bottom_.load(acquire);
 
-  // Check if there are elements to steal
+  /* Check if there are elements to steal */
   if (top < bottom) {
-    // Retrieve the element from the buffer
+    /* Retrieve the element from the buffer */
     auto t = buffer_.load(consume)->get(top);
 
-    // Try to update the top index atomically, ensuring exclusive access to the
-    // element
+    /* Try to update the top index atomically, ensuring exclusive access to the
+     * element */
     if (!top_.compare_exchange_strong(top, top + 1, seq_cst, relaxed)) {
       return std::nullopt;
     }
 
-    // Return the element based on optimization (with or without dynamic
-    // allocation)
+    /* Return the element based on optimization (with or without dynamic
+     * allocation) */
     if constexpr (no_alloc) {
       return t;
     } else {
@@ -220,7 +221,7 @@ Deque<T>::steal() noexcept(no_alloc ||
 }
 
 template <typename T> Deque<T>::~Deque() {
-  // Clean up dynamically allocated elements if needed
+  /* Clean up dynamically allocated elements if needed */
   if constexpr (!no_alloc) {
     while (!empty()) {
       pop();
