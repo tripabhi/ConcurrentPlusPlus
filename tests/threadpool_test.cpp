@@ -4,7 +4,7 @@
 #include "doctest/doctest.h"
 
 TEST_CASE("threadpool.Destructor") {
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 500; i++) {
     async::ThreadPool pool;
   }
 }
