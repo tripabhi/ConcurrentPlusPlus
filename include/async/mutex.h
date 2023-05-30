@@ -1,6 +1,6 @@
 #pragma once
 
-#include "async/semaphore.h"
+#include "async/sem.h"
 #include <atomic>
 #include <memory>
 
@@ -25,6 +25,6 @@ public:
 
 private:
   std::atomic<int> contention_;
-  DefaultSemaphore sem_;
+  DefaultSemaphoreType sem_;
 };
 } // namespace async
