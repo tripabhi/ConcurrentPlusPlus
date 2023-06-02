@@ -104,7 +104,7 @@ public:
 private:
   std::promise<std::invoke_result_t<F>>
       promise_; /* Promise object for setting the result or exception */
-  F callable_;  /* Stored callable object (function)qq */
+  F callable_;  /* Stored callable object (function) */
 };
 
 } // namespace internal
@@ -136,7 +136,7 @@ public:
     for (std::size_t i = 0; i < nthreads; ++i) {
       threads_.emplace_back([&, id = i](std::stop_token token) {
         /* Worker thread routine */
-        prng::jump(id); /* Creates a large non-overlapping sequence to generate
+        prng::jump(); /* Creates a large non-overlapping sequence to generate
                          random numbers */
         do {
           /* Wait for task to pushed and worker to be signaled. */

@@ -46,24 +46,22 @@ uint64_t next(void) {
    to 2^64 calls to next(); it can be used to generate 2^64
    non-overlapping subsequences for parallel computations. */
 
-void jump(int jumps) {
+void jump(void) {
   static const uint64_t JUMP[] = {0xdf900294d8f554a5, 0x170865df4b3201fc};
 
-  while (jumps--) {
-    uint64_t s0 = 0;
-    uint64_t s1 = 0;
-    for (int i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
-      for (int b = 0; b < 64; b++) {
-        if (JUMP[i] & UINT64_C(1) << b) {
-          s0 ^= s[0];
-          s1 ^= s[1];
-        }
-        next();
+  uint64_t s0 = 0;
+  uint64_t s1 = 0;
+  for (int i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
+    for (int b = 0; b < 64; b++) {
+      if (JUMP[i] & UINT64_C(1) << b) {
+        s0 ^= s[0];
+        s1 ^= s[1];
       }
+      next();
+    }
 
-    s[0] = s0;
-    s[1] = s1;
-  }
+  s[0] = s0;
+  s[1] = s1;
 }
 
 /* This is the long-jump function for the generator. It is equivalent to
